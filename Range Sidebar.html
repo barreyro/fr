@@ -1,0 +1,575 @@
+<link rel="stylesheet" href="//code.jquery.com/ui/1.10.4/themes/smoothness/jquery-ui.css">
+<link rel="stylesheet" href="/resources/demos/style.css">
+<script src="//ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
+<script src="//code.jquery.com/ui/1.10.4/jquery-ui.js"></script>
+<?!= include('jquery_switch'); ?>
+<?!= include('Stylesheet'); ?>
+<?!= include('switch_css'); ?>
+<link rel="stylesheet" href="https://ssl.gstatic.com/docs/script/css/add-ons.css">
+
+<style>
+ .switch-button-label {
+    font-size: 16px;
+  }
+  
+  #slider-div {
+    top: 60px;
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  
+  .hidden {
+    display: none;
+  }
+  
+  .ui-widget {
+    font-family: "arial";
+    font-size: 12px;
+  }
+  
+  .ui-widget select {
+    font-family: "arial";
+  }
+  
+  .section-header {
+    margin: 10px;
+    font-size: 16px;
+  }
+  
+  #on-off {
+   position: absolute;
+   bottom: 0px;
+   width: 300px;
+   height: 180px;
+   border-top: 1px solid grey;
+   background-color: whiteSmoke;
+  }
+  
+  #off-text {
+    position: absolute;
+    top: 120px;
+    bottom: 70px;
+    margin: 10px;
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+  
+  h2 {
+   font-size: 14px;
+   margin-left: 10px;
+   margin-right: 10px;
+  }
+  
+  #help-text {
+    border: 1px solid grey;
+    width: 100px;
+    padding: 3px;
+    font-size: 10px;
+    text-align: center;
+  }
+  
+  #unavailable {
+    color: red;
+    margin: 5px;
+  }
+  
+  .loading-gif {
+    height: 28px;
+    width: 28px;
+    vertical-align: middle;
+    margin: 1px 1px 1px 1px;
+  }
+  
+.ui-accordion .ui-accordion-content {
+  padding: 1em;
+}
+
+.question-title {
+  height: 14px;
+  font-style: bold;
+  font-size: 12px;
+  font-family: "Arial";
+ }
+
+ 
+ #cancel-button {
+   position: absolute;
+   top: 300px;
+   left: 100px;
+ }
+ 
+ p {
+   margin: 10px;
+ }
+ 
+ #accordion-panel {
+   position: absolute;
+   top: 95px;
+   bottom: 155px;
+   width: 300px;
+   overflow-x: hidden;
+   overflow-y: scroll;
+ }
+ 
+#trigger-options table,  #trigger-options td {
+ border: 0px;
+ padding: 10px;
+ font-size: 13px;
+}
+
+body {
+  margin: 0px;
+}
+ 
+
+  
+</style>
+
+<div id="main" class="loading">
+<img id="waitingGif" src="https://googledrive.com/host/0B2-Pf-O8LZyGN3VCWWtybjJXT0k"/>
+  <p id="topNote">Assign Form questions to be populated from values lists in a Sheet or student rosters created in the <a href="https://chrome.google.com/webstore/detail/doctopus/ffhegaddkjpkfiemhhnphmnadfbkdhbf?utm_source=permalink">Doctopus Add-on.</a>  Only multiple choice, checkbox, list, and grid type questions are supported.</p>
+  <div id="accordion-panel">
+    <div id="accordion">
+      <h3 class="formQuestion">Loading...</h3>
+    </div>
+  </div>
+</div>
+<input type="hidden" id = "selectedAccordionId" name="selected">
+<pre id="output"></pre>
+<div id="preview-panel">
+  <div id="preview-range-link">
+  </div>
+  <img id="close-preview" src="https://googledrive.com/host/0B2-Pf-O8LZyGXzNyZ0poUXN0ckE" onclick="closeRangePreview()"/>
+  <img id="waitingGif-2" src="https://googledrive.com/host/0B2-Pf-O8LZyGN3VCWWtybjJXT0k"/>
+  <div id="preview-content">
+</div>
+</div>
+<div id="sure-panel">
+  <div id="sure-content">
+     <input id="delete-rid" type="hidden">
+     <strong>Are you sure?</strong><p>This will delete the values list named <span id="range-remove-name"></span> and remove it from any attached questions in this form.</p>
+     <input type="button" id = "yes-delete" class="action" value="Delete" onclick="reallyDeleteRange()"/>
+     <input type="button" id = "no-delete" value="Cancel" onclick="closeDeleteRangeWarning()"/>
+  </div>
+</div>
+ <div id = "on-off" class="hidden">
+    <input type="button" id="refreshFormFields" value="Refresh questions" onclick="refresh()" disabled/>
+    <p>Auto-repopulate questions...</p>
+    <table id="trigger-options">
+    <tr>
+      <td>
+        On form submit
+      </td>
+      <td>  
+      <div id="slider-div">
+        <input id="slider" type="checkbox" class="hidden" value="0" disabled>
+      </div>
+      </td>
+    </tr>
+    <tr>
+      <td>
+        Every hour
+      </td>
+      <td>
+      <div id="slider-div-time">
+        <input id="slider-time" type="checkbox" class="hidden" value="0" disabled>
+      </div>
+      </td>
+    </tr>
+    </table>
+</div>
+<button id="cancel-button" onclick="cancel()">Cancel</button>
+<script>
+ var CHECK_DIALOG_INTERVAL_SECONDS = 1;
+ var intervalIds = {};
+ var APPROVED_TYPES = ["CHECKBOX","LIST","MULTIPLE_CHOICE", "GRID"];
+ var ACTIVE_ACCORDION_ID = 0;
+ var UI_GLOBAL = {};
+ var QID_ARRAY = [];
+ var PREVIEW_ICON_URL = "https://googledrive.com/host/0B2-Pf-O8LZyGZ3JkWWlkanU5R2M";
+ var EDIT_ICON_URL = "https://googledrive.com/host/0B2-Pf-O8LZyGbGZpVTdiZmZjT3c";
+ var DELETE_ICON_URL = "https://googledrive.com/host/0B2-Pf-O8LZyGV2x3NUxEQmtGVEk";
+ var CLOSE_ICON_URL = "https://googledrive.com/host/0B2-Pf-O8LZyGXzNyZ0poUXN0ckE";
+ var WAITING_ICON_URL = "https://googledrive.com/host/0B2-Pf-O8LZyGR0NrR1p5dkczRWs";
+ var TRIGGER_STATE = false;
+ var TIME_TRIGGER_STATE = false;
+ 
+// The code in this function runs when the page is loaded.
+
+$(function() {
+  google.script.run.withSuccessHandler(loadSidePanel).withFailureHandler(showError).reloadPanel();
+});
+
+function showError(err) {
+  alert(err);
+}
+
+
+function cancel() {
+  google.script.host.close();
+}
+
+// Attached to sidepanel refresh button.  
+function refresh() {
+ $( "#waitingGif" ).toggleClass('hidden', false);
+ $( "#main" ).toggleClass('loading', true);
+ $("#refreshFormFields").prop('disabled', true);
+ $("#cancel-button").toggleClass('hidden', false);
+ google.script.run.withFailureHandler(showError).withSuccessHandler(loadSidePanel).reloadPanel();
+}
+
+
+
+function loadSidePanel(triggerStateObj) {
+  $( "#accordion" ).accordion({
+    activate: function( event, ui ) {
+      var active = $('#accordion').accordion('option', 'active');
+      ACTIVE_ACCORDION_ID = QID_ARRAY[active];
+    },
+    heightStyle: "content"
+  });
+  $( "#accordion" ).tooltip();
+  google.script.run.withFailureHandler(showError).withSuccessHandler(showFormQuestionAssignments).getUiGlobal(); 
+  $("#refreshFormFields").prop('disabled', false);
+  
+  
+  //form trigger handling
+  TRIGGER_STATE = triggerStateObj.triggerState;
+  var value = "disallowed";
+  if (!triggerStateObj.triggerState) {
+    value = false;
+  } else if (TRIGGER_STATE === "this_user") {
+    value = true;
+  }
+  if (value !== "disallowed") {
+    $('#slider').switchButton({
+    width: 50,
+    height: 15,
+    button_width: 20,
+    on_callback: setTrigger,
+    off_callback: unsetTrigger,
+    trigger_callback_onload: false,
+    checked: value
+   }).toggleClass('hidden',false);
+ } else {
+   $('#slider .switch-button-label').unbind('click').toggleClass('inactive', true);
+   $('#slider .switch-button-background').unbind('click').toggleClass('inactive', true);
+   $('#slider .switch-button-button').unbind('click').toggleClass('inactive', true);
+   $('#slider-div').html('<div id="help-text">Form trigger already set by ' + TRIGGER_STATE + '</div>');
+ }
+
+ //time trigger handling
+  TIME_TRIGGER_STATE = triggerStateObj.timeTriggerState;
+  var timeValue = "disallowed";
+  if (!triggerStateObj.timeTriggerState) {
+    timeValue = false;
+  } else if (TIME_TRIGGER_STATE === "this_user") {
+    timeValue = true;
+  }
+  if (timeValue !== "disallowed") {
+    $('#slider-time').switchButton({
+    width: 50,
+    height: 15,
+    button_width: 20,
+    on_callback: setTimeTrigger,
+    off_callback: unsetTimeTrigger,
+    trigger_callback_onload: false,
+    checked: timeValue
+   }).toggleClass('hidden',false);
+ } else {
+   $('#slider-time .switch-button-label').unbind('click').toggleClass('inactive', true);
+   $('#slider-time .switch-button-background').unbind('click').toggleClass('inactive', true);
+   $('#slider-time .switch-button-button').unbind('click').toggleClass('inactive', true);
+   $('#slider-div-time').html('<div id="help-text">Time trigger already set by ' + TIME_TRIGGER_STATE + '</div>');
+ }
+ $("#on-off").toggleClass("hidden", false);
+}
+
+function toggleTrigger() {
+   var switchState = $('#slider input[type=checkbox]').val();
+   alert(switchState);
+}
+
+
+function setTrigger() {
+  google.script.run.withFailureHandler(showError).withSuccessHandler(triggerSet).setTriggerServerSide();  
+}
+
+function triggerSet(triggerStatus) {
+  if ((triggerStatus !== "success") && (triggerStatus !== "already set") && (triggerStatus !== "set by this user")) {
+   $("#on-off").prepend("Trigger already set by " + triggerStatus); 
+  }
+}
+
+
+function unsetTrigger() {
+  google.script.run.withFailureHandler(showError).unsetTriggerServerSide();
+}
+
+
+
+function setTimeTrigger() {
+  google.script.run.withFailureHandler(showError).withSuccessHandler(triggerSet).setTimeTriggerServerSide();  
+}
+
+function timeTriggerSet(triggerStatus) {
+  if ((triggerStatus !== "success") && (triggerStatus !== "already set") && (triggerStatus !== "set by this user")) {
+   $("#on-off").prepend("Trigger already set by " + triggerStatus); 
+  }
+}
+
+
+function unsetTimeTrigger() {
+  google.script.run.withFailureHandler(showError).unsetTimeTriggerServerSide();
+}
+
+
+function onFailure(err) {
+  console.log(JSON.stringify(err));
+}
+
+
+function trunc(string, n) {
+    return string.length>n ? string.substr(0,n-1)+'&hellip;' : string;
+}
+
+
+function evaluateCheckbox() {
+  var qid = this.value.split("-")[1];
+    if (this.checked) {
+      $('#range-'+qid).prop('disabled',false);
+      initRangeSelect(qid);
+    } else {
+      google.script.run.withFailureHandler(showError).deleteQuestionJob(qid);
+      $('#range-'+qid).prop('disabled',true).val('none');
+      $("#edit-" + qid).toggleClass("hidden", true);
+      $("#delete-" + qid).toggleClass("hidden", true);
+    }
+}
+
+
+//used to launch a new range builder when the user has no existing, defined ranges
+function initRangeSelect(qid) {  
+  var thisRangeId = $("#range-"+qid).val();
+  if (thisRangeId === "new") {
+    google.script.run.withFailureHandler(showError).withSuccessHandler(launchNewRangePicker).launchResetDialog(qid);
+    return;
+  }
+  if ((thisRangeId !== "none")&&(thisRangeId !== "new")) {
+    //google.script.run.saveQuestionJob(qid, thisRangeId);
+  }
+  if (thisRangeId.indexOf('roster')!==-1) {
+    $("#edit-" + qid).toggleClass("hidden", false);
+    $("#delete-" + qid).toggleClass("hidden", false);
+  }
+}
+
+//used to launch a new range builder when the user selects "New" in a range listbox
+function evaluateRangeSelect() {  
+  var qid = $(this).attr('id').split("-")[1];
+  var thisRangeId = $(this).val();
+  if (thisRangeId === "new") {
+    $("#edit-" + qid).toggleClass("hidden", true);
+    $("#delete-" + qid).toggleClass("hidden", true);
+    google.script.run.withFailureHandler(showError).withSuccessHandler(launchNewRangePicker).launchResetDialog(qid);
+  } else if ((thisRangeId !== "none")&&(thisRangeId.indexOf("roster") === -1)) {
+    $('#loading-gif-' + qid).toggleClass('hidden', false);
+    $("#edit-" + qid).toggleClass("hidden", false);
+    $("#delete-" + qid).toggleClass("hidden", false);
+    google.script.run.withFailureHandler(showError).withSuccessHandler(catchInaccessibleDataSource).saveQuestionJob(qid, thisRangeId);
+  } else if ((thisRangeId !== "none")&&(thisRangeId.indexOf("roster") !== -1)) {
+    $('#loading-gif-' + qid).toggleClass('hidden', false);
+    $("#edit-" + qid).toggleClass("hidden", true);
+    $("#delete-" + qid).toggleClass("hidden", true);
+    google.script.run.withFailureHandler(showError).withSuccessHandler(catchInaccessibleDataSource).saveQuestionJob(qid, thisRangeId);
+  } else {
+    google.script.run.withFailureHandler(showError).deleteQuestionJob(qid);
+    $("#edit-" + qid).toggleClass("hidden", true);
+    $("#delete-" + qid).toggleClass("hidden", true);
+  }
+}
+
+
+function catchInaccessibleDataSource(status) {
+  var qid = status.split("||")[0];
+  var status = status.split("||")[1];
+  if (status === "Unable to populate") {
+    alert('Unable to use this range. Source sheet no longer exists or is not shared with your account.');
+  } 
+  $('#loading-gif-' + qid).toggleClass('hidden', true);
+}
+
+
+function populateRangeSelectors(ui_global) {
+  if (ui_global) {
+    UI_GLOBAL = JSON.parse(ui_global);
+    $( "#waitingGif" ).toggleClass('hidden', true);
+    $( "#main" ).toggleClass('loading', false);
+    $("#cancel-button").toggleClass('hidden', true);
+  }
+  for (var i=0; i<UI_GLOBAL.questions.length; i++) {
+    if (APPROVED_TYPES.indexOf(UI_GLOBAL.questions[i].type)!==-1) {
+       var options = '';
+       $("#range-" + UI_GLOBAL.questions[i].id).html('');
+       var theseRangeIds = [];
+       for (var j=0; j<UI_GLOBAL.namedRanges.length; j++) {
+         theseRangeIds.push(UI_GLOBAL.namedRanges[j].rangeId);
+         $("#range-" + UI_GLOBAL.questions[i].id).prepend('<option value = "' + UI_GLOBAL.namedRanges[j].rangeId + '">-' + UI_GLOBAL.namedRanges[j].name + '</option>');
+       } 
+       $("#range-" + UI_GLOBAL.questions[i].id).append('<option value = "new">new values list</option>');
+       $("#range-" + UI_GLOBAL.questions[i].id).prepend('<option value = "none">select</option>');
+       var preAssignedIndex = UI_GLOBAL.assignedQuestions.indexOf(UI_GLOBAL.questions[i].id);
+       if (preAssignedIndex !==-1) {
+         $("#check-box-" + UI_GLOBAL.questions[i].id).prop('checked', true);
+         if (theseRangeIds.indexOf(UI_GLOBAL.questionJobs[preAssignedIndex]['rangeId'])!==-1) {
+           $("#range-" + UI_GLOBAL.questions[i].id).val(UI_GLOBAL.questionJobs[preAssignedIndex]['rangeId']);
+         }
+         $("#range-" + UI_GLOBAL.questions[i].id).prop('disabled', false);
+         if (UI_GLOBAL.questionJobs[preAssignedIndex]['rangeId'].indexOf('roster')===-1) {
+           $("#edit-" + UI_GLOBAL.questions[i].id).toggleClass("hidden", false);
+           $("#delete-" + UI_GLOBAL.questions[i].id).toggleClass("hidden", false);
+         }
+       }
+     }
+   }
+    $("#cancel-button").toggleClass('hidden', true);
+}
+
+
+function oneDArrayToTable(array) {
+  var table = '<table id="preview-table">';
+  for (var i=0; i<array.length; i++) {
+    table += "<tr><td>" + array[i] + "</td></tr>";
+  }
+  table += "</table>";
+  return table;
+}
+
+function editRange() {
+  var qid = $(this).attr('id').split("-")[1];
+  var thisRangeId = $("#range-"+qid).val();
+  google.script.run.withFailureHandler(showError).launchResetDialog(qid);
+  launchRangeEditPanel(qid, thisRangeId);
+}
+
+
+function closeDeleteRangeWarning() {
+   $( "#sure-panel" ).toggle(); 
+   $( "#main" ).toggleClass('loading', false);
+   $("#delete-rid").val('');
+}
+
+
+function deleteRangeWarning() {
+  $( "#sure-panel" ).toggle(); 
+  $( "#main" ).toggleClass('loading', true);
+  var qid = $(this).attr('id').split("-")[1];
+  var thisRangeId = $("#range-"+qid).val();
+  google.script.run.withFailureHandler(showError).withSuccessHandler(updateRangeDeleteName).getRangeById(thisRangeId);
+  $("#delete-rid").val(thisRangeId);
+}
+
+
+function updateRangeDeleteName(rangeObj) {
+  $('#range-remove-name').html(rangeObj.name);
+}
+
+
+function reallyDeleteRange() {
+ $( "#waitingGif" ).toggleClass('hidden', false); 
+ $( "#sure-panel" ).toggle(); 
+  var thisRangeId = $("#delete-rid").val();
+  google.script.run.withFailureHandler(showError).withSuccessHandler(showFormQuestionAssignments).deleteQuestionJobsAndRange(thisRangeId);
+}
+
+function showFormQuestionAssignments(ui_global) {
+  UI_GLOBAL = JSON.parse(ui_global);
+  var questionJobs = UI_GLOBAL.questionJobs;
+  var namedRanges = UI_GLOBAL.namedRanges;
+  var questions = UI_GLOBAL.questions;
+  $('#accordion').empty();
+  QID_ARRAY = [];
+  for (var i = 0; i < questions.length; i++) {
+    var thisQid = questions[i].id.toString();
+    var isAssigned = UI_GLOBAL.assignedQuestions.indexOf(thisQid);
+    if (APPROVED_TYPES.indexOf(questions[i].type)!=-1) {
+      QID_ARRAY.push(questions[i].id);
+      var thisSheetImage = questions[i].destUrl ? '<img src="https://googledrive.com/host/0B2-Pf-O8LZyGM190NzM2NDJTMFE" title="Defaults to form destination" class="spreadsheetPicker">' : '<img src="https://googledrive.com/host/0B2-Pf-O8LZyGM190NzM2NDJTMFE" title="Defaults to current spreadsheet" class="spreadsheetPicker">';
+      var thisTitle = (questions[i].title.length > 45) ? questions[i].title : "";
+      $('#accordion').append('<span title="' + thisTitle + '" class="question-title formQuestion" id = "' + questions[i].id + '">'+trunc(questions[i].title, 45)+'</span>'
+        + '<div id= "form-q-' + questions[i].id + '">'
+        + '<input id="check-box-' + questions[i].id + '" class="populate-checkbox" type="checkbox" value="populate-' + questions[i].id + '">Populate from values list</input><br>'
+        + '<span><select class="range-select" id = "range-' + questions[i].id + '" disabled><option>Dummy</option></select></span>'
+        + '<span><img class="square-button hidden" id = "edit-' + questions[i].id + '" src="' + EDIT_ICON_URL + '" title="Edit values list"/></span>'
+        + '<span><img class="square-button hidden" id = "delete-' + questions[i].id + '" src="' + DELETE_ICON_URL + '" title="Delete values list"/>'
+        + '<span><img class="loading-gif hidden" id = "loading-gif-' + questions[i].id + '" src="' + WAITING_ICON_URL + '"/></span></span>'
+        + '</div>');
+      $('#range-' + questions[i].id).change(evaluateRangeSelect);
+     // $("#preview-" + questions[i].id).click(previewRange);
+      $("#edit-" + questions[i].id).click(editRange);
+      $("#delete-" + questions[i].id).click(deleteRangeWarning);      
+    }
+//    if (thisDestLink==="") {
+//      $("#button-" + questions[i].id).attr("disabled","disabled");
+//    }
+  }
+  $( "#main" ).toggleClass('loading', false);
+  $('input.populate-checkbox:checkbox').change(evaluateCheckbox);
+  populateRangeSelectors();
+  $( ".spreadsheetPicker").bind("click",function() { alert( "User clicked spreadsheetPicler");});
+  $( "#waitingGif" ).toggleClass('hidden', true);
+  $('#accordion').accordion('refresh').accordion('option','heightStyle','content');
+  if (QID_ARRAY.indexOf(ACTIVE_ACCORDION_ID)!=-1) {
+    $('#accordion').accordion('option','active', QID_ARRAY.indexOf(ACTIVE_ACCORDION_ID));
+  } else {
+    $('#accordion').accordion('option','active', 0);
+  }
+}
+
+
+
+function launchNewRangePicker(id) {
+    $( "#waitingGif" ).toggleClass('hidden', false);
+    $( "#main" ).toggleClass('loading', true);
+    google.script.run.withFailureHandler(showError).withSuccessHandler(function(dialogId) {
+      var intervalId = window.setInterval(function() {
+        checkDialog(dialogId);
+      }, CHECK_DIALOG_INTERVAL_SECONDS * 1000);
+      intervalIds[dialogId] = intervalId;
+    }).showNewRangePicker(id);
+}
+
+
+function launchRangeEditPanel(questionId, rangeId) {
+    $( "#waitingGif" ).toggleClass('hidden', false);
+    $( "#main" ).toggleClass('loading', true);
+    google.script.run.withFailureHandler(showError).withSuccessHandler(function(dialogId) {
+      var intervalId = window.setInterval(function() {
+        checkDialog(dialogId);
+      }, CHECK_DIALOG_INTERVAL_SECONDS * 1000);
+      intervalIds[dialogId] = intervalId;
+    }).showRangeEditor(questionId, rangeId);
+}
+
+
+
+function checkDialog(dialogId) {
+    google.script.run.withFailureHandler(showError).withSuccessHandler(function(status) {
+      if (status === "saved") {
+        google.script.run.withFailureHandler(showError).withFailureHandler(onFailure).withSuccessHandler(populateRangeSelectors).getUiGlobal();
+      }
+      if (status === "picker closed") {
+        $( "#waitingGif" ).toggleClass('hidden', true);
+        $( "#main" ).toggleClass('loading', false);
+      }
+      if (status != 'open') {
+        window.clearInterval(intervalIds[dialogId]);
+      }
+    }).getDialogStatus(dialogId);
+  }
+
+
+</script>
+
+

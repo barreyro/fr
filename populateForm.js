@@ -1,21 +1,26 @@
 function populateAllFormQuestions(e) {
   try {
-    if (checkAuthStatus()) {
+    var authStatus = checkAuthStatus();
+    if (authStatus) {
       var questionsUnableToPopulate = [];
       try {
         var form = e ? e.source : FormApp.getActiveForm();  //assume it's running on form trigger or from ui
         var formId = form.getId();
       } catch(err) {
+        console.log(err);
       }
       if (!form) {  //assume it's running on time trigger     
         try {
           formId = PropertiesService.getDocumentProperties().getProperty('formId');
           form = FormApp.openById(formId);
+   
         } catch(err) {
           logErrInfo_(catchToString_(err));
           return;
         }
       }
+      var testForm = FormApp.getActiveForm();
+      var testFormProps = testForm.getItems();
       var questionJobs = getQuestionJobs(form, formId);
       for (var i=0; i<questionJobs.length; i++) {
         var thisRangeId = questionJobs[i].rangeId;
@@ -55,8 +60,9 @@ function populateFormQuestion(questionId, rangeId, form) {
         return;
       }
       var type = thisQuestion.getType();
-      if (type == "LIST") {
-        thisQuestion.asListItem().setChoiceValues(theseOptions);
+      if (type == "LIST" && theseOptions.length) {
+        var questionListItem = thisQuestion.asListItem();
+        questionListItem.setChoiceValues(theseOptions);
       }
       if (type == "MULTIPLE_CHOICE") {
         var isBranching = false;
@@ -67,7 +73,7 @@ function populateFormQuestion(questionId, rangeId, form) {
           var navType = existingChoices[i].getPageNavigationType() ? existingChoices[i].getPageNavigationType().toString() : '';
           if ((navType)&&(navType !== "CONTINUE")) {
             isBranching = true;
-          }
+          } 
           existingChoiceValues.push(choiceValue);
         }
         if (isBranching) {

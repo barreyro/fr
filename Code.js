@@ -39,12 +39,11 @@ function reloadPanel() {
   try {
     populateAllFormQuestions();
     var triggerStateObj = {};
-    triggerStateObj.triggerState = getTriggerState();
-    triggerStateObj.timeTriggerState = getTimeTriggerState();
+    triggerStateObj['triggerState'] = getTriggerState();
+    triggerStateObj['timeTriggerState'] = getTimeTriggerState();
     return triggerStateObj;
   } catch(err) {
     err = logErr_(err);
-    throw err;
   }
 }
 
@@ -516,7 +515,7 @@ function getEligibleQuestionIds() {
 */
 function getOAuthToken() {
   DriveApp.getRootFolder();
-  return ScriptApp.getOAuthToken();;
+  return ScriptApp.getOAuthToken();
 }
 
 function closeUi() {

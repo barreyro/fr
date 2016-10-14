@@ -127,7 +127,7 @@ body {
 </style>
 
 <div id="main" class="loading">
-<img id="waitingGif" src="https://googledrive.com/host/0B2-Pf-O8LZyGN3VCWWtybjJXT0k"/>
+<img id="waitingGif" src="https://storage.googleapis.com/cloudlab-images/loading.gif"/>
   <p id="topNote">Assign Form questions to be populated from values lists in a Sheet or student rosters created in the <a href="https://chrome.google.com/webstore/detail/doctopus/ffhegaddkjpkfiemhhnphmnadfbkdhbf?utm_source=permalink">Doctopus Add-on.</a>  Only multiple choice, checkbox, list, and grid type questions are supported.</p>
   <div id="accordion-panel">
     <div id="accordion">
@@ -140,8 +140,8 @@ body {
 <div id="preview-panel">
   <div id="preview-range-link">
   </div>
-  <img id="close-preview" src="https://googledrive.com/host/0B2-Pf-O8LZyGXzNyZ0poUXN0ckE" onclick="closeRangePreview()"/>
-  <img id="waitingGif-2" src="https://googledrive.com/host/0B2-Pf-O8LZyGN3VCWWtybjJXT0k"/>
+  <img id="close-preview" src="https://storage.googleapis.com/cloudlab-images/formRanger_delete.png" onclick="closeRangePreview()"/>
+  <img id="waitingGif-2" src="https://storage.googleapis.com/cloudlab-images/loading.gif"/>
   <div id="preview-content">
 </div>
 </div>
@@ -187,18 +187,26 @@ body {
  var ACTIVE_ACCORDION_ID = 0;
  var UI_GLOBAL = {};
  var QID_ARRAY = [];
- var PREVIEW_ICON_URL = "https://googledrive.com/host/0B2-Pf-O8LZyGZ3JkWWlkanU5R2M";
- var EDIT_ICON_URL = "https://googledrive.com/host/0B2-Pf-O8LZyGbGZpVTdiZmZjT3c";
- var DELETE_ICON_URL = "https://googledrive.com/host/0B2-Pf-O8LZyGV2x3NUxEQmtGVEk";
- var CLOSE_ICON_URL = "https://googledrive.com/host/0B2-Pf-O8LZyGXzNyZ0poUXN0ckE";
- var WAITING_ICON_URL = "https://googledrive.com/host/0B2-Pf-O8LZyGR0NrR1p5dkczRWs";
+ var PREVIEW_ICON_URL = "https://storage.googleapis.com/cloudlab-images/formRanger_preview.png";
+ var EDIT_ICON_URL = "https://storage.googleapis.com/cloudlab-images/formRanger_edit.png";
+ var DELETE_ICON_URL = "https://storage.googleapis.com/cloudlab-images/formRanger_delete.png";
+ var CLOSE_ICON_URL = "https://storage.googleapis.com/cloudlab-images/formRanger_delete.png";
+ var WAITING_ICON_URL = "https://storage.googleapis.com/cloudlab-images/loading.gif";
  var TRIGGER_STATE = false;
  var TIME_TRIGGER_STATE = false;
  
 // The code in this function runs when the page is loaded.
 
 $(function() {
-  google.script.run.withSuccessHandler(loadSidePanel).withFailureHandler(showError).reloadPanel();
+  google.script.run
+    .withSuccessHandler(function(callback){
+        loadSidePanel(callback);
+      })
+    .withFailureHandler(function(){
+      console.log('line 206');
+      showError();
+    })
+    .reloadPanel();
 });
 
 function showError(err) {
@@ -216,7 +224,14 @@ function refresh() {
  $( "#main" ).toggleClass('loading', true);
  $("#refreshFormFields").prop('disabled', true);
  $("#cancel-button").toggleClass('hidden', false);
- google.script.run.withFailureHandler(showError).withSuccessHandler(loadSidePanel).reloadPanel();
+ google.script.run
+   .withFailureHandler(function(){
+       showError();
+     })
+   .withSuccessHandler(function(callback){
+      loadSidePanel(callback);
+    })
+   .reloadPanel();
 }
 
 
@@ -229,8 +244,18 @@ function loadSidePanel(triggerStateObj) {
     },
     heightStyle: "content"
   });
+  
   $( "#accordion" ).tooltip();
-  google.script.run.withFailureHandler(showError).withSuccessHandler(showFormQuestionAssignments).getUiGlobal(); 
+  
+  google.script.run
+  .withFailureHandler(function(){
+    showError();
+  })
+  .withSuccessHandler(function(callback){
+    showFormQuestionAssignments(callback);
+  })
+  .getUiGlobal(); 
+  
   $("#refreshFormFields").prop('disabled', false);
   
   
@@ -449,7 +474,11 @@ function oneDArrayToTable(array) {
 function editRange() {
   var qid = $(this).attr('id').split("-")[1];
   var thisRangeId = $("#range-"+qid).val();
-  google.script.run.withFailureHandler(showError).launchResetDialog(qid);
+  google.script.run
+    .withFailureHandler(function(){
+      showError();
+    })
+    .launchResetDialog(qid);
   launchRangeEditPanel(qid, thisRangeId);
 }
 
@@ -466,7 +495,14 @@ function deleteRangeWarning() {
   $( "#main" ).toggleClass('loading', true);
   var qid = $(this).attr('id').split("-")[1];
   var thisRangeId = $("#range-"+qid).val();
-  google.script.run.withFailureHandler(showError).withSuccessHandler(updateRangeDeleteName).getRangeById(thisRangeId);
+  google.script.run
+  .withFailureHandler(function(){
+    showError();
+    })
+  .withSuccessHandler(function(){
+    updateRangeDeleteName();
+    })
+  .getRangeById(thisRangeId);
   $("#delete-rid").val(thisRangeId);
 }
 
@@ -480,7 +516,14 @@ function reallyDeleteRange() {
  $( "#waitingGif" ).toggleClass('hidden', false); 
  $( "#sure-panel" ).toggle(); 
   var thisRangeId = $("#delete-rid").val();
-  google.script.run.withFailureHandler(showError).withSuccessHandler(showFormQuestionAssignments).deleteQuestionJobsAndRange(thisRangeId);
+  google.script.run
+    .withFailureHandler(function(){
+      populateRangeSelectors();
+    })
+    .withSuccessHandler(function(callback){
+      showFormQuestionAssignments(callback);
+    })
+    .deleteQuestionJobsAndRange(thisRangeId);
 }
 
 function showFormQuestionAssignments(ui_global) {
@@ -495,7 +538,7 @@ function showFormQuestionAssignments(ui_global) {
     var isAssigned = UI_GLOBAL.assignedQuestions.indexOf(thisQid);
     if (APPROVED_TYPES.indexOf(questions[i].type)!=-1) {
       QID_ARRAY.push(questions[i].id);
-      var thisSheetImage = questions[i].destUrl ? '<img src="https://googledrive.com/host/0B2-Pf-O8LZyGM190NzM2NDJTMFE" title="Defaults to form destination" class="spreadsheetPicker">' : '<img src="https://googledrive.com/host/0B2-Pf-O8LZyGM190NzM2NDJTMFE" title="Defaults to current spreadsheet" class="spreadsheetPicker">';
+      var thisSheetImage = questions[i].destUrl ? '<img src="https://storage.googleapis.com/cloudlab-images/formRanger_ss.png" title="Defaults to form destination" class="spreadsheetPicker">' : '<img src="https://storage.googleapis.com/cloudlab-images/formRanger_ss.png" title="Defaults to current spreadsheet" class="spreadsheetPicker">';
       var thisTitle = (questions[i].title.length > 45) ? questions[i].title : "";
       $('#accordion').append('<span title="' + thisTitle + '" class="question-title formQuestion" id = "' + questions[i].id + '">'+trunc(questions[i].title, 45)+'</span>'
         + '<div id= "form-q-' + questions[i].id + '">'
@@ -532,32 +575,52 @@ function showFormQuestionAssignments(ui_global) {
 function launchNewRangePicker(id) {
     $( "#waitingGif" ).toggleClass('hidden', false);
     $( "#main" ).toggleClass('loading', true);
-    google.script.run.withFailureHandler(showError).withSuccessHandler(function(dialogId) {
+    google.script.run
+    .withFailureHandler(showError)
+    .withSuccessHandler(function(dialogId) {
       var intervalId = window.setInterval(function() {
         checkDialog(dialogId);
       }, CHECK_DIALOG_INTERVAL_SECONDS * 1000);
       intervalIds[dialogId] = intervalId;
-    }).showNewRangePicker(id);
+    })
+    .showNewRangePicker(id);
 }
 
 
 function launchRangeEditPanel(questionId, rangeId) {
     $( "#waitingGif" ).toggleClass('hidden', false);
     $( "#main" ).toggleClass('loading', true);
-    google.script.run.withFailureHandler(showError).withSuccessHandler(function(dialogId) {
-      var intervalId = window.setInterval(function() {
-        checkDialog(dialogId);
-      }, CHECK_DIALOG_INTERVAL_SECONDS * 1000);
+    google.script.run
+      .withFailureHandler(function(){
+        showError();
+      })
+      .withSuccessHandler(function(dialogId) {
+        var intervalId = window.setInterval(function() {
+          checkDialog(dialogId);
+          }, CHECK_DIALOG_INTERVAL_SECONDS * 1000);
       intervalIds[dialogId] = intervalId;
-    }).showRangeEditor(questionId, rangeId);
+      })
+    .showRangeEditor(questionId, rangeId);
 }
 
 
 
 function checkDialog(dialogId) {
-    google.script.run.withFailureHandler(showError).withSuccessHandler(function(status) {
+    google.script.run
+    .withFailureHandler(function() {
+        showError();
+        })
+    .withSuccessHandler(function(status) {
       if (status === "saved") {
-        google.script.run.withFailureHandler(showError).withFailureHandler(onFailure).withSuccessHandler(populateRangeSelectors).getUiGlobal();
+        google.script.run
+        .withFailureHandler(function() {
+          showError();
+          onFailure();
+          })
+        .withSuccessHandler(function(){
+          populateRangeSelectors();
+        })
+        .getUiGlobal();
       }
       if (status === "picker closed") {
         $( "#waitingGif" ).toggleClass('hidden', true);
@@ -571,5 +634,4 @@ function checkDialog(dialogId) {
 
 
 </script>
-
 

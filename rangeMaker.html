@@ -228,8 +228,9 @@ div.preview-note {
   var DIALOG_ID = '<?= dialogId ?>';
   var CHECKIN_INTERVAL_SECONDS = 3;
   var DEVELOPER_KEY = 'AIzaSyCqwTeqguYHJcArFGY6C5nLm12Tk7omcMU';
+  var CLIENT_ID ='';
   var DIALOG_DIMENSIONS = {width: 300, height: 350};
-    var pickerApiLoaded = false;
+  var pickerApiLoaded = false;
   var SHEETOBJS = JSON.parse(<?= sheetObjs || "false" ?>) || "";
   var SSID = <?= ssId ?>;
   var SELECTEDSHEET = JSON.parse(<?= selectedSheet || "false" ?>) || "";
@@ -253,10 +254,24 @@ div.preview-note {
    
   $(function() {
     if (MODE==="new") {
-      google.script.run.withSuccessHandler(createPicker).withFailureHandler(showError).getOAuthToken();
+      google.script.run
+      .withSuccessHandler(function(callback){
+        createPicker(callback);
+        })
+      .withFailureHandler(function(err){
+        showError(err)
+        })
+      .getOAuthToken();
     }
     if (MODE==="edit") {
-      google.script.run.withSuccessHandler(setToken).withFailureHandler(showError).getOAuthToken();
+      google.script.run
+      .withSuccessHandler(function(callback){
+        setToken();
+        })
+      .withFailureHandler(function(err){
+        showError(err)
+        })
+      .getOAuthToken();
       editView();
     }
   });
@@ -559,11 +574,32 @@ function refreshDataPreview(sheetObjs) {
      $('#pick-data').click(function() {  returnToStep2(); });
      $('.bottom-buttons2').toggleClass('hidden', true);
      $('.bottom-buttons3').toggleClass('hidden', false);
+     
      SELECTEDHEADER = $('#selectHeader').val();
-     $('#middle-step-3').html('<div id="range-overview"><span class="spreadsheet-link"><a href="'+ SELECTEDSHEET.ssUrl + '" class="spreadsheet-link"><img src="https://storage.googleapis.com/cloudlab-images/formRanger_ss.png" class="spreadsheet-icon"/>' + SELECTEDSHEET.ssName + '</a></span>'
-                            + '<span class="label"><strong>Sheet:</strong> ' + SELECTEDSHEET.name + '</span>'
-                            + '<span class="label"><strong>Column header:</strong> ' + SELECTEDHEADER + '</span></div>'
-                            + '<div id="name-range">Give this values list a name: <input type="text" id="rangeName" name="rangeName"></div>');
+
+     $('#middle-step-3').html('
+        <div id="range-overview">
+          <span class="spreadsheet-link">
+            <a href="'+ SELECTEDSHEET.ssUrl + '" class="spreadsheet-link">
+              <img src="https://storage.googleapis.com/cloudlab-images/formRanger_ss.png" class="spreadsheet-icon"/>
+                ' + SELECTEDSHEET.ssName + '
+            </a>
+          </span>'
+         + '<span class="label">
+              <strong>
+                Sheet:
+              </strong> 
+              ' + SELECTEDSHEET.name 
+         + '</span>'
+         + '<span class="label">
+            <strong>Column header:</strong> ' 
+            + SELECTEDHEADER + '
+            </span>
+            </div>'
+         + '<div id="name-range">
+            Give this values list a name: <input type="text" id="rangeName" name="rangeName">
+        </div>
+    ');
      $('#returnToStep2Button').on('click', function() { $('#middle-step-3').toggleClass("loading",true); 
                                                          returnToStep2();  });
      $('#rangeName').keyup(validateRangeName);

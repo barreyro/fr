@@ -472,11 +472,12 @@ function oneDArrayToTable(array) {
 }
 
 function editRange() {
+  console.log(this);
   var qid = $(this).attr('id').split("-")[1];
   var thisRangeId = $("#range-"+qid).val();
   google.script.run
-    .withFailureHandler(function(){
-      showError();
+    .withFailureHandler(function(err){
+      showError(err);
     })
     .launchResetDialog(qid);
   launchRangeEditPanel(qid, thisRangeId);
@@ -548,10 +549,16 @@ function showFormQuestionAssignments(ui_global) {
         + '<span><img class="square-button hidden" id = "delete-' + questions[i].id + '" src="' + DELETE_ICON_URL + '" title="Delete values list"/>'
         + '<span><img class="loading-gif hidden" id = "loading-gif-' + questions[i].id + '" src="' + WAITING_ICON_URL + '"/></span></span>'
         + '</div>');
-      $('#range-' + questions[i].id).change(evaluateRangeSelect);
+      $('#range-' + questions[i].id).change(function() {
+          evaluateRangeSelect();
+        });
      // $("#preview-" + questions[i].id).click(previewRange);
-      $("#edit-" + questions[i].id).click(editRange);
-      $("#delete-" + questions[i].id).click(deleteRangeWarning);      
+      $("#edit-" + questions[i].id).click(function () {
+        editRange();
+        });
+      $("#delete-" + questions[i].id).click(function(){
+        deleteRangeWarning();
+        });      
     }
 //    if (thisDestLink==="") {
 //      $("#button-" + questions[i].id).attr("disabled","disabled");
